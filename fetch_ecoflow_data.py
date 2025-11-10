@@ -21,7 +21,7 @@ DEVICES = [
         "name": "DELTA 2 Max Principal",
         "sn": "R351ZAB5PGAW0684",
         "type": "delta2max",
-        "always_online": True  # Cambiar a False si no tiene WiFi constante
+        "always_online": False  # Cambiar a False si no tiene WiFi constante
     },
     {
         "name": "RIVER 2 Max Solar",
