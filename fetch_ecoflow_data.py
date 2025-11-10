@@ -27,7 +27,7 @@ DEVICES = [
         "name": "RIVER 2 Max Solar",
         "sn": "R611ZAB6XGBQ0739",
         "type": "river2max",
-        "always_online": True
+        "always_online": False
     },
     # Ejemplo para agregar más dispositivos:
     # {
