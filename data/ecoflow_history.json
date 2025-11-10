@@ -10,7 +10,7 @@
         "design_capacity_wh": 2048,
         "remaining_capacity_wh": 1792,
         "online": true,
-        "timestamp": "2025-01-15T10:00:00Z"
+        "timestamp": "2025-11-5T10:00:00Z"
       },
       {
         "battery_percent": 88.2,
@@ -19,7 +19,7 @@
         "design_capacity_wh": 2048,
         "remaining_capacity_wh": 1806,
         "online": true,
-        "timestamp": "2025-01-15T10:05:00Z"
+        "timestamp": "2025-11-5T10:05:00Z"
       },
       {
         "battery_percent": 89.0,
@@ -28,7 +28,7 @@
         "design_capacity_wh": 2048,
         "remaining_capacity_wh": 1823,
         "online": true,
-        "timestamp": "2025-01-15T10:10:00Z"
+        "timestamp": "2025-11-5T10:10:00Z"
       }
     ]
   },
@@ -43,7 +43,7 @@
         "design_capacity_wh": 512,
         "remaining_capacity_wh": 334,
         "online": true,
-        "timestamp": "2025-01-15T10:00:00Z"
+        "timestamp": "2025-11-5T10:00:00Z"
       },
       {
         "battery_percent": 66.1,
@@ -52,7 +52,7 @@
         "design_capacity_wh": 512,
         "remaining_capacity_wh": 338,
         "online": true,
-        "timestamp": "2025-01-15T10:05:00Z"
+        "timestamp": "2025-11-5T10:05:00Z"
       },
       {
         "battery_percent": 67.2,
@@ -61,7 +61,7 @@
         "design_capacity_wh": 512,
         "remaining_capacity_wh": 344,
         "online": true,
-        "timestamp": "2025-01-15T10:10:00Z"
+        "timestamp": "2025-11-5T10:10:00Z"
       }
     ]
   }
