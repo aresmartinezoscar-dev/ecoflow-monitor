@@ -1,0 +1,68 @@
+{
+  "R351ZAB5PGAW0684": {
+    "device_name": "DELTA 2 Max Principal",
+    "serial_number": "R351ZAB5PGAW0684",
+    "readings": [
+      {
+        "battery_percent": 87.5,
+        "solar_input_w": 245.3,
+        "total_output_w": 89.2,
+        "design_capacity_wh": 2048,
+        "remaining_capacity_wh": 1792,
+        "online": true,
+        "timestamp": "2025-01-15T10:00:00Z"
+      },
+      {
+        "battery_percent": 88.2,
+        "solar_input_w": 268.7,
+        "total_output_w": 85.4,
+        "design_capacity_wh": 2048,
+        "remaining_capacity_wh": 1806,
+        "online": true,
+        "timestamp": "2025-01-15T10:05:00Z"
+      },
+      {
+        "battery_percent": 89.0,
+        "solar_input_w": 292.1,
+        "total_output_w": 78.9,
+        "design_capacity_wh": 2048,
+        "remaining_capacity_wh": 1823,
+        "online": true,
+        "timestamp": "2025-01-15T10:10:00Z"
+      }
+    ]
+  },
+  "R611ZAB6XGBQ0739": {
+    "device_name": "RIVER 2 Max Solar",
+    "serial_number": "R611ZAB6XGBQ0739",
+    "readings": [
+      {
+        "battery_percent": 65.3,
+        "solar_input_w": 156.8,
+        "total_output_w": 42.1,
+        "design_capacity_wh": 512,
+        "remaining_capacity_wh": 334,
+        "online": true,
+        "timestamp": "2025-01-15T10:00:00Z"
+      },
+      {
+        "battery_percent": 66.1,
+        "solar_input_w": 178.3,
+        "total_output_w": 38.5,
+        "design_capacity_wh": 512,
+        "remaining_capacity_wh": 338,
+        "online": true,
+        "timestamp": "2025-01-15T10:05:00Z"
+      },
+      {
+        "battery_percent": 67.2,
+        "solar_input_w": 189.5,
+        "total_output_w": 35.2,
+        "design_capacity_wh": 512,
+        "remaining_capacity_wh": 344,
+        "online": true,
+        "timestamp": "2025-01-15T10:10:00Z"
+      }
+    ]
+  }
+}
