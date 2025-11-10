@@ -1,5 +1,8 @@
 name: Fetch EcoFlow Data
 
+permissions:
+  contents: write
+
 # Se ejecuta cada 5 minutos
 on:
   schedule:
