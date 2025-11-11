@@ -41,8 +41,8 @@ DEVICES = [
 # ========================================
 # CONFIGURACIÓN DE API
 # ========================================
-#API_BASE_URL = "https://api.ecoflow.com"
-API_BASE_URL = "https://api-eu.ecoflow.com"
+API_BASE_URL = "https://api.ecoflow.com"
+#API_BASE_URL = "https://api-eu.ecoflow.com"
 API_ENDPOINT_DEVICE = "/iot-open/sign/device/quota"
 
 # Credenciales desde variables de entorno (GitHub Secrets)
