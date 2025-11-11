@@ -21,13 +21,13 @@ DEVICES = [
         "name": "DELTA 2 Max Principal",
         "sn": "R351ZAB5PGAW0684",
         "type": "delta2max",
-        "always_online": False  # Cambiar a False si no tiene WiFi constante
+        "always_online": True  # Cambiar a False si no tiene WiFi constante
     },
     {
         "name": "RIVER 2 Max Solar",
         "sn": "R611ZAB6XGBQ0739",
         "type": "river2max",
-        "always_online": False
+        "always_online": True
     },
     # Ejemplo para agregar más dispositivos:
     # {
@@ -42,7 +42,6 @@ DEVICES = [
 # CONFIGURACIÓN DE API
 # ========================================
 API_BASE_URL = "https://api.ecoflow.com"
-#API_BASE_URL = "https://api-eu.ecoflow.com"
 API_ENDPOINT_DEVICE = "/iot-open/sign/device/quota"
 
 # Credenciales desde variables de entorno (GitHub Secrets)
@@ -113,7 +112,7 @@ def get_device_data(device_sn):
         "Content-Type": "application/json"
     }
     
-    # Realizar petición
+    # Realizar petición (POST, no GET)
     url = f"{API_BASE_URL}{API_ENDPOINT_DEVICE}"
     
     try:
