@@ -59,10 +59,13 @@ DATA_FILE = "data/ecoflow_history.json"
 def generate_signature(access_key, secret_key, params, nonce, timestamp):
     """
     Genera la firma HMAC-SHA256 requerida por EcoFlow API
-    Para POST requests, no incluimos los params en la firma
+    Los params van en la URL, así que SÍ se incluyen en la firma
     """
-    # Para POST, solo incluimos accessKey, nonce y timestamp
-    sign_str = f"accessKey={access_key}&nonce={nonce}&timestamp={timestamp}"
+    # Ordenar parámetros alfabéticamente
+    sorted_params = "&".join([f"{k}={params[k]}" for k in sorted(params.keys())])
+    
+    # Crear string para firmar
+    sign_str = f"accessKey={access_key}&nonce={nonce}&{sorted_params}&timestamp={timestamp}"
     
     # Generar firma HMAC-SHA256
     signature = hmac.new(
@@ -98,7 +101,7 @@ def get_device_data(device_sn):
     nonce = str(int(time.time() * 1000))
     timestamp = str(int(time.time() * 1000))
     
-    # Generar firma
+    # Generar firma (ahora SÍ incluye los params porque van en la URL)
     signature = generate_signature(ACCESS_KEY, SECRET_KEY, params, nonce, timestamp)
     
     # Headers
@@ -110,11 +113,11 @@ def get_device_data(device_sn):
         "Content-Type": "application/json"
     }
     
-    # Realizar petición (POST, no GET)
+    # Realizar petición POST con params en URL (no en body)
     url = f"{API_BASE_URL}{API_ENDPOINT_DEVICE}"
     
     try:
-        response = requests.post(url, headers=headers, json=params, timeout=10)
+        response = requests.post(url, headers=headers, params=params, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
