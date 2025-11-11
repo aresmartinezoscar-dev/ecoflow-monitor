@@ -117,7 +117,7 @@ def get_device_data(device_sn):
     url = f"{API_BASE_URL}{API_ENDPOINT_DEVICE}"
     
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response = requests.post(url, headers=headers, json=params, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
