@@ -59,12 +59,10 @@ DATA_FILE = "data/ecoflow_history.json"
 def generate_signature(access_key, secret_key, params, nonce, timestamp):
     """
     Genera la firma HMAC-SHA256 requerida por EcoFlow API
+    Para POST requests, no incluimos los params en la firma
     """
-    # Ordenar parámetros alfabéticamente
-    sorted_params = "&".join([f"{k}={params[k]}" for k in sorted(params.keys())])
-    
-    # Crear string para firmar
-    sign_str = f"accessKey={access_key}&nonce={nonce}&timestamp={timestamp}&{sorted_params}"
+    # Para POST, solo incluimos accessKey, nonce y timestamp
+    sign_str = f"accessKey={access_key}&nonce={nonce}&timestamp={timestamp}"
     
     # Generar firma HMAC-SHA256
     signature = hmac.new(
