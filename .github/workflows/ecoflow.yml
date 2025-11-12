@@ -2,7 +2,7 @@ name: EcoFlow Data Collector
 
 on:
   schedule:
-    - cron: "*/15 * * * *" # cada 15 minutos
+    - cron: "*/1 * * * *" # cada 15 minutos
   workflow_dispatch:
 
 jobs:
