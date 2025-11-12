@@ -2,41 +2,117 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>EcoFlow Monitor (Firebase)</title>
+  <title>EcoFlow • Monitor Energético</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Firebase compat (más simple para este caso) -->
+  <!-- Chart.js + adapter de fechas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <header>
-    <h1>EcoFlow DELTA 2 Max + Batería adicional</h1>
-    <p>Datos desde Firebase (histórico aunque la página esté cerrada)</p>
+<body class="theme-dark">
+  <header class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <h1>EcoFlow • Monitor Energético</h1>
+    </div>
+    <div class="actions">
+      <label class="switch">
+        <input id="liveToggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+      <span class="muted">Auto-refresco</span>
+      <button id="themeBtn" class="btn-secondary">Tema</button>
+    </div>
   </header>
 
-  <main>
-    <section class="card">
-      <h2>Estado de carga (%)</h2>
-      <canvas id="socChart"></canvas>
+  <main class="container">
+    <section class="card controls">
+      <div class="row">
+        <div class="group">
+          <label>Rango rápido</label>
+          <div class="chips">
+            <button class="chip" data-range="1h">1 h</button>
+            <button class="chip" data-range="6h">6 h</button>
+            <button class="chip" data-range="12h">12 h</button>
+            <button class="chip active" data-range="24h">24 h</button>
+            <button class="chip" data-range="48h">48 h</button>
+            <button class="chip" data-range="7d">7 d</button>
+          </div>
+        </div>
+        <div class="group">
+          <label>Rango personalizado</label>
+          <div class="range">
+            <input id="startDt" type="datetime-local" />
+            <span class="to">→</span>
+            <input id="endDt" type="datetime-local" />
+            <button id="applyBtn" class="btn-primary">Aplicar</button>
+          </div>
+        </div>
+        <div class="group right">
+          <button id="exportBtn" class="btn-secondary">Exportar CSV</button>
+          <span id="status" class="muted">—</span>
+        </div>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Potencia (W)</h2>
-      <canvas id="powerChart"></canvas>
+    <section class="grid-3 kpis">
+      <div class="card kpi">
+        <h3>SOC Global (%)</h3>
+        <div class="val" id="socGlobalVal">—</div>
+        <div class="meta"><span id="socGlobalAvg">—</span> media · <span id="socGlobalMin">—</span> mín · <span id="socGlobalMax">—</span> máx</div>
+      </div>
+      <div class="card kpi">
+        <h3>SOC DELTA 2 Max (%)</h3>
+        <div class="val" id="socDeltaVal">—</div>
+        <div class="meta"><span id="socDeltaAvg">—</span> media · <span id="socDeltaMin">—</span> mín · <span id="socDeltaMax">—</span> máx</div>
+      </div>
+      <div class="card kpi">
+        <h3>SOC Batería Adicional (%)</h3>
+        <div class="val" id="socExtraVal">—</div>
+        <div class="meta"><span id="socExtraAvg">—</span> media · <span id="socExtraMin">—</span> mín · <span id="socExtraMax">—</span> máx</div>
+      </div>
     </section>
 
-    <section class="card info">
-      <h2>Última lectura</h2>
-      <pre id="lastReading">Cargando datos...</pre>
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h3>Estado de carga (%)</h3>
+          <small class="muted">Barra/escala se ajustan automáticamente</small>
+        </div>
+        <canvas id="socChart" height="150"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Potencia total (W)</h3>
+          <small class="muted">Entrada vs Salida</small>
+        </div>
+        <canvas id="powerChart" height="150"></canvas>
+      </div>
+    </section>
+
+    <section class="card table-wrap">
+      <div class="card-head">
+        <h3>Lecturas</h3>
+        <small class="muted"><span id="count">0</span> muestras · Última: <span id="lastTs">—</span></small>
+      </div>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>SOC Global</th>
+            <th>SOC Delta</th>
+            <th>SOC Extra</th>
+            <th>Entrada (W)</th>
+            <th>Salida (W)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </section>
   </main>
-
-  <footer>
-    <p>Datos guardados en Firebase Realtime Database · Actualiza la página para ver las últimas lecturas</p>
-  </footer>
 
   <script src="firebase-config.js"></script>
   <script src="frontend.js"></script>
