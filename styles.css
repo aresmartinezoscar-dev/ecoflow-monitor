@@ -3,29 +3,32 @@
   --primary:#37d67a; --secondary:#60a5fa; --accent:#f59e0b; --danger:#ef4444;
   --ring:rgba(96,165,250,.35);
 }
+body.theme-light{
+  --bg:#f5f7fb; --bg2:#ffffff; --card:#ffffff; --muted:#6b7280; --text:#0f172a;
+  --primary:#16a34a; --secondary:#2563eb; --accent:#d97706; --danger:#dc2626;
+}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-.theme-dark .card{background:var(--card)}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--bg2);border-bottom:1px solid #162540}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--bg2);border-bottom:1px solid rgba(0,0,0,.15)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 16px var(--primary)}
 .brand h1{margin:0;font-size:18px;font-weight:600}
 .actions{display:flex;align-items:center;gap:10px}
 .container{max-width:1200px;margin:24px auto;padding:0 16px}
 
-.card{border:1px solid #162540;border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.card{background:var(--card);border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.09)}
 .card-head{display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-bottom:8px}
 .controls .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
 .group{display:flex;flex-direction:column;gap:6px}
 .group.right{margin-left:auto;align-items:flex-end}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{padding:8px 10px;border:1px solid #203050;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-.chip.active,.chip:hover{background:#14233b;border-color:#2a3d5f}
+.chip{padding:8px 10px;border:1px solid rgba(0,0,0,.15);background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
+.chip.active,.chip:hover{background:rgba(0,0,0,.05)}
 .range{display:flex;gap:8px;align-items:center}
-input[type="datetime-local"]{background:#0b1424;border:1px solid #1e2e4a;color:var(--text);padding:8px;border-radius:8px}
-.btn-primary,.btn-secondary{border-radius:10px;padding:8px 12px;border:1px solid #2a3d5f;cursor:pointer}
-.btn-primary{background:linear-gradient(90deg,var(--primary),#23c463);color:#00210f;border:none}
-.btn-secondary{background:#13223a;color:var(--text)}
+input[type="datetime-local"]{background:var(--bg2);border:1px solid rgba(0,0,0,.15);color:var(--text);padding:8px;border-radius:8px}
+.btn-primary,.btn-secondary{border-radius:10px;padding:8px 12px;border:1px solid rgba(0,0,0,.15);cursor:pointer}
+.btn-primary{background:linear-gradient(90deg,var(--primary),#23c463);color:#fff;border:none}
+.btn-secondary{background:var(--bg2);color:var(--text)}
 .muted{color:var(--muted)}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
@@ -35,13 +38,13 @@ input[type="datetime-local"]{background:#0b1424;border:1px solid #1e2e4a;color:v
 
 .table-wrap{overflow:auto}
 table{width:100%;border-collapse:collapse}
-thead th{position:sticky;top:0;background:#0f1b2e}
-th,td{border-bottom:1px solid #172846;padding:8px;text-align:left}
-tr:hover td{background:#0d182b}
+thead th{position:sticky;top:0;background:var(--card)}
+th,td{border-bottom:1px solid rgba(0,0,0,.1);padding:8px;text-align:left}
+tr:hover td{background:rgba(0,0,0,.03)}
 
 .switch{position:relative;display:inline-block;width:46px;height:26px}
 .switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#1a2741;transition:.2s;border-radius:26px}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#adb5bd;transition:.2s;border-radius:26px}
 .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:white;transition:.2s;border-radius:50%}
 input:checked + .slider{background:#2ab673}
 input:checked + .slider:before{transform:translateX(20px)}
