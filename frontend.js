@@ -1,16 +1,17 @@
 // ======= Config & estado =======
 const DB_PATH = "ecoflow_logs";
-const MAX_POINTS = 2000;              // tope de puntos para no saturar navegador
-const LIVE_INTERVAL_MS = 60_000;      // 1 min (la web solo lee Firebase)
+const MAX_POINTS = 2000;
+const LIVE_INTERVAL_MS = 60_000; // refresco visual (no afecta a la frecuencia de lecturas)
 let liveTimer = null;
 
 const state = {
-  startTs: Date.now() - 24*3600*1000, // por defecto últimas 24h
-  endTs:   Date.now(),
-  raw: [],     // registros crudos del rango
+  startTs: Date.now() - 24*3600*1000, // últimas 24h por defecto
+  endTs: Date.now(),
+  raw: [],
+  focusDataset: null // índice de dataset en foco o null
 };
 
-// ======= Utilidades =======
+// ======= Utils =======
 const $ = (id)=>document.getElementById(id);
 const fmt = (n, d=0)=> (n===null||n===undefined||isNaN(n)) ? "—" : Number(n).toFixed(d);
 const pad = (x)=> String(x).padStart(2,"0");
@@ -27,17 +28,27 @@ function stats(arr){
   return {avg:sum/clean.length, min:Math.min(...clean), max:Math.max(...clean), last:clean.at(-1)};
 }
 
-function autoScale(data, {minPadding=0.05, maxPadding=0.1, hardMin=null, hardMax=null}={}){
-  const clean = data.filter(v=>typeof v==='number' && !isNaN(v));
+function hardMinMax(values, {floor0=false}={}){
+  const clean = values.filter(v=>typeof v==='number' && !isNaN(v));
   if(!clean.length) return {min:0, max:1};
   let lo = Math.min(...clean), hi = Math.max(...clean);
   if (lo===hi){ lo -= 1; hi += 1; }
-  const span = hi - lo;
-  lo -= span*minPadding; hi += span*maxPadding;
-  if(hardMin!=null) lo = Math.min(lo, hardMin);
-  if(hardMax!=null) hi = Math.max(hi, hardMax);
-  return {min:Math.floor(lo), max:Math.ceil(hi)};
+  if (floor0) lo = Math.min(0, lo);
+  return {min:lo, max:hi};
 }
+
+// Plugin: dejar SOLO ticks min y max en eje Y
+const minMaxTicksPlugin = {
+  id: 'minMaxTicks',
+  afterBuildTicks(scale) {
+    if (scale.axis !== 'y') return;
+    const ticks = scale.ticks;
+    if (ticks && ticks.length >= 2) {
+      scale.ticks = [ticks[0], ticks[ticks.length-1]];
+    }
+  }
+};
+Chart.register(minMaxTicksPlugin);
 
 // ======= Controles de rango =======
 function applyQuick(range){
@@ -47,7 +58,6 @@ function applyQuick(range){
   else { state.startTs = now - (map[range]||24)*3600*1000; state.endTs = now; }
   loadRange();
 }
-
 function applyCustom(){
   const s = fromLocalISO($("startDt").value);
   const e = fromLocalISO($("endDt").value);
@@ -56,20 +66,13 @@ function applyCustom(){
   loadRange();
 }
 
-// ======= Firebase: lectura por rango =======
+// ======= Firebase =======
 async function readRange(startTs, endTs){
   $("status").textContent = "Cargando…";
-  const ref = db.ref(DB_PATH)
-    .orderByChild("ts")
-    .startAt(startTs)
-    .endAt(endTs);
-
-  const snap = await ref.get(); // una sola lectura
+  const ref = db.ref(DB_PATH).orderByChild("ts").startAt(startTs).endAt(endTs);
+  const snap = await ref.get();
   const val = snap.val() || {};
-  const rows = Object.values(val)
-    .sort((a,b)=>a.ts-b.ts)
-    .slice(-MAX_POINTS);
-
+  const rows = Object.values(val).sort((a,b)=>a.ts-b.ts).slice(-MAX_POINTS);
   $("status").textContent = `Rango: ${new Date(startTs).toLocaleString()} → ${new Date(endTs).toLocaleString()}`;
   return rows;
 }
@@ -85,10 +88,20 @@ function setupCharts(){
     responsive: true, animation: false, parsing:false, normalized:true,
     scales:{
       x:{type:"time", time:{unit:"hour"}, ticks:{autoSkip:true, maxTicksLimit:12}},
-      y:{beginAtZero:false}
+      y:{beginAtZero:false} // límites exactos los fijamos en updateCharts
     },
     plugins:{
-      legend:{display:true, labels:{usePointStyle:true}},
+      legend:{
+        display:true,
+        labels:{usePointStyle:true},
+        // Click en leyenda: foco/defoco de dataset (sin ocultar)
+        onClick(e, legendItem, legend){
+          const index = legendItem.datasetIndex;
+          if(state.focusDataset === index){ state.focusDataset = null; }
+          else { state.focusDataset = index; }
+          applyFocusStyles();
+        }
+      },
       tooltip:{mode:"index", intersect:false, callbacks:{
         label(ctx){ return `${ctx.dataset.label}: ${fmt(ctx.parsed.y, ctx.dataset._decimals||0)}`; }
       }}
@@ -99,9 +112,9 @@ function setupCharts(){
   socChart = new Chart(socCtx, {
     type:"line",
     data:{datasets:[
-      {label:"SOC Global", data:[], borderColor:"#37d67a", borderWidth:2, tension:.25, pointRadius:0, _decimals:0},
-      {label:"SOC DELTA", data:[], borderColor:"#60a5fa", borderWidth:2, tension:.25, pointRadius:0, _decimals:0},
-      {label:"SOC Extra", data:[], borderColor:"#f59e0b", borderWidth:2, tension:.25, pointRadius:0, _decimals:0},
+      {label:"SOC Global", data:[], borderColor:"#16a34a", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
+      {label:"SOC DELTA", data:[], borderColor:"#2563eb", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
+      {label:"SOC Extra",  data:[], borderColor:"#d97706", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
     ]},
     options: JSON.parse(JSON.stringify(commonOpts))
   });
@@ -109,11 +122,33 @@ function setupCharts(){
   powerChart = new Chart(powerCtx, {
     type:"line",
     data:{datasets:[
-      {label:"Entrada total (W)", data:[], borderColor:"#22c55e", borderWidth:2, tension:.25, pointRadius:0, _decimals:0},
-      {label:"Salida total (W)", data:[], borderColor:"#ef4444", borderWidth:2, tension:.25, pointRadius:0, _decimals:0},
+      {label:"Entrada total (W)", data:[], borderColor:"#22c55e", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
+      {label:"Salida total (W)",  data:[], borderColor:"#ef4444", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
     ]},
     options: JSON.parse(JSON.stringify(commonOpts))
   });
+}
+
+// Aplicar estilo de foco (engrosa y opaca la serie seleccionada; atenúa el resto)
+function applyFocusStyles(){
+  [socChart, powerChart].forEach(chart=>{
+    chart.data.datasets.forEach((ds, idx)=>{
+      const focused = (state.focusDataset === null) || (state.focusDataset === idx);
+      ds.borderWidth = focused ? (ds._baseWidth*2) : ds._baseWidth;
+      ds.borderColor = setAlpha(ds.borderColor, focused ? 1 : 0.25);
+    });
+    chart.update();
+  });
+}
+function setAlpha(hexOrRgb, alpha){
+  // soporta colores hex tipo #rrggbb
+  if(/^#([0-9a-f]{6})$/i.test(hexOrRgb)){
+    const r = parseInt(hexOrRgb.slice(1,3),16);
+    const g = parseInt(hexOrRgb.slice(3,5),16);
+    const b = parseInt(hexOrRgb.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return hexOrRgb;
 }
 
 function updateCharts(rows){
@@ -125,6 +160,7 @@ function updateCharts(rows){
   const win  = toPts("watts_in");
   const wout = toPts("watts_out");
 
+  // Datos
   socChart.data.datasets[0].data = socG;
   socChart.data.datasets[1].data = socD;
   socChart.data.datasets[2].data = socE;
@@ -132,21 +168,23 @@ function updateCharts(rows){
   powerChart.data.datasets[0].data = win;
   powerChart.data.datasets[1].data = wout;
 
-  // Auto-escala Y según datos
+  // Límites Y EXACTOS: mín/máx del rango
   const sg = socG.map(p=>p.y).filter(v=>v!=null);
   const sd = socD.map(p=>p.y).filter(v=>v!=null);
   const se = socE.map(p=>p.y).filter(v=>v!=null);
   const pw = [...win.map(p=>p.y), ...wout.map(p=>p.y)].filter(v=>v!=null);
 
-  const socScale = autoScale([...sg,...sd,...se], {hardMin:0, hardMax:100});
-  const powScale = autoScale(pw, {minPadding:.08, maxPadding:.12, hardMin:0});
+  const socMinMax = hardMinMax([...sg,...sd,...se]);
+  const powMinMax = hardMinMax(pw, {floor0:true});
 
-  socChart.options.scales.y.suggestedMin = socScale.min;
-  socChart.options.scales.y.suggestedMax = socScale.max;
-  powerChart.options.scales.y.suggestedMin = powScale.min;
-  powerChart.options.scales.y.suggestedMax = powScale.max;
+  socChart.options.scales.y.min = Math.floor(socMinMax.min);
+  socChart.options.scales.y.max = Math.ceil(socMinMax.max);
+
+  powerChart.options.scales.y.min = Math.floor(powMinMax.min);
+  powerChart.options.scales.y.max = Math.ceil(powMinMax.max);
 
   socChart.update(); powerChart.update();
+  applyFocusStyles();
 }
 
 // ======= KPIs + tabla =======
@@ -154,8 +192,6 @@ function updateKPIs(rows){
   const g = rows.map(r=>r.soc_global);
   const d = rows.map(r=>r.soc_delta);
   const e = rows.map(r=>r.soc_extra);
-  const wi= rows.map(r=>r.watts_in);
-  const wo= rows.map(r=>r.watts_out);
 
   const Sg=stats(g), Sd=stats(d), Se=stats(e);
 
@@ -194,23 +230,30 @@ function updateKPIs(rows){
   });
 }
 
-// ======= Export CSV =======
-function exportCSV(){
+// ======= Export XLSX =======
+function exportXLSX(){
   const rows = state.raw;
   if(!rows.length){ alert("Sin datos para exportar"); return; }
-  const headers = ["ts","iso","soc_global","soc_delta","soc_extra","watts_in","watts_out"];
-  const lines = [headers.join(",")];
+
+  const sheetData = [
+    ["ts","iso","soc_global","soc_delta","soc_extra","watts_in","watts_out"]
+  ];
   rows.forEach(r=>{
-    lines.push([r.ts,new Date(r.ts).toISOString(),r.soc_global,r.soc_delta,r.soc_extra,r.watts_in,r.watts_out].join(","));
+    sheetData.push([
+      r.ts,
+      new Date(r.ts).toISOString(),
+      r.soc_global, r.soc_delta, r.soc_extra,
+      r.watts_in, r.watts_out
+    ]);
   });
-  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "ecoflow_export.csv"; a.click();
-  URL.revokeObjectURL(url);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  XLSX.utils.book_append_sheet(wb, ws, "ecoflow");
+  XLSX.writeFile(wb, "ecoflow_export.xlsx");
 }
 
-// ======= Carga principal =======
+// ======= Lectura y refresco =======
 async function loadRange(){
   $("startDt").value = toLocalISO(state.startTs);
   $("endDt").value   = toLocalISO(state.endTs);
@@ -220,12 +263,10 @@ async function loadRange(){
   updateCharts(rows);
 }
 
-// ======= Live toggle =======
 function setLive(enabled){
   if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }
   if(enabled){
     liveTimer = setInterval(()=>{
-      // “Últimas X horas/días”: mover ventana al presente
       const dur = state.endTs - state.startTs;
       state.endTs = Date.now(); state.startTs = state.endTs - dur;
       loadRange();
@@ -235,6 +276,7 @@ function setLive(enabled){
 
 // ======= Tema =======
 $("themeBtn").addEventListener("click", ()=>{
+  document.body.classList.toggle("theme-light");
   document.body.classList.toggle("theme-dark");
 });
 
@@ -248,14 +290,14 @@ document.querySelectorAll(".chip").forEach(btn=>{
 });
 
 $("applyBtn").addEventListener("click", applyCustom);
-$("exportBtn").addEventListener("click", exportCSV);
+$("exportXlsxBtn").addEventListener("click", exportXLSX);
 $("liveToggle").addEventListener("change", e=> setLive(e.target.checked));
 
 // ======= Init =======
 window.addEventListener("load", ()=>{
-  setupCharts();
-  // por defecto últimas 24h
+  // init rango por defecto
   $("startDt").value = toLocalISO(state.startTs);
   $("endDt").value   = toLocalISO(state.endTs);
+  setupCharts();
   loadRange();
 });
