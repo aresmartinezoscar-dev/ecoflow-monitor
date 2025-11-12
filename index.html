@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>EcoFlow Monitor (Firebase)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase compat (más simple para este caso) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+</head>
+<body>
+  <header>
+    <h1>EcoFlow DELTA 2 Max + Batería adicional</h1>
+    <p>Datos desde Firebase (histórico aunque la página esté cerrada)</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Estado de carga (%)</h2>
+      <canvas id="socChart"></canvas>
+    </section>
+
+    <section class="card">
+      <h2>Potencia (W)</h2>
+      <canvas id="powerChart"></canvas>
+    </section>
+
+    <section class="card info">
+      <h2>Última lectura</h2>
+      <pre id="lastReading">Cargando datos...</pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>Datos guardados en Firebase Realtime Database · Actualiza la página para ver las últimas lecturas</p>
+  </footer>
+
+  <script src="firebase-config.js"></script>
+  <script src="frontend.js"></script>
+</body>
+</html>
