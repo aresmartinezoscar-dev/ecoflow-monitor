@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔋 Monitor EcoFlow</title>
+    <title>🔋 Monitor DELTA 2 Max + Batería Adicional</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -133,7 +133,7 @@
         .battery-low {
             color: #ff4444 !important;
         }
-        /* Por defecto es 15%, cambiar en JavaScript (línea ~350) */
+        /* Por defecto es 15%, cambiar en JavaScript (línea ~330) */
         
         .battery-ok {
             color: #4CAF50;
@@ -156,27 +156,23 @@
             font-size: 0.9em;
         }
         
-        .offline-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-left: 10px;
-        }
-        
-        .online {
-            background: #4CAF50;
-            box-shadow: 0 0 10px #4CAF50;
-        }
-        
-        .offline {
-            background: #ff4444;
-        }
-        
         .loading {
             text-align: center;
             padding: 50px;
             font-size: 1.2em;
+            color: white;
+        }
+        
+        .battery-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        
+        .has-extra-battery {
+            background: #4CAF50;
             color: white;
         }
         
@@ -198,18 +194,11 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔋 Monitor EcoFlow en Tiempo Real</h1>
-            <p class="subtitle">Monitoreo automático cada 5 minutos</p>
+            <h1>🔋 Monitor DELTA 2 Max + Batería Adicional</h1>
+            <p class="subtitle">Monitoreo conjunto en tiempo real (actualización cada 5 minutos)</p>
         </header>
         
         <div class="controls">
-            <div class="control-group">
-                <label for="device-select">📱 Dispositivo:</label>
-                <select id="device-select">
-                    <option value="">Cargando dispositivos...</option>
-                </select>
-            </div>
-            
             <div class="control-group">
                 <label for="time-range">📅 Período:</label>
                 <select id="time-range">
@@ -226,12 +215,15 @@
         <div class="stats-grid" id="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon">🔋</div>
-                <div class="stat-label">Batería</div>
+                <div class="stat-label">Batería Total</div>
                 <div class="stat-value" id="stat-battery">--</div>
+                <div class="battery-indicator" id="extra-battery-indicator" style="display:none;">
+                    Con batería adicional
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">☀️</div>
-                <div class="stat-label">Entrada Solar</div>
+                <div class="stat-label">Entrada Total</div>
                 <div class="stat-value" id="stat-solar">--</div>
             </div>
             <div class="stat-card">
@@ -260,7 +252,7 @@
         // ⚠️ MODIFICAR AQUÍ EL UMBRAL DE BATERÍA BAJA (en porcentaje)
         const LOW_BATTERY_THRESHOLD = 15; // Si batería < 15%, se muestra en rojo
         
-        // URL del archivo de datos (se ajusta automáticamente según el hosting)
+        // URL del archivo de datos
         const DATA_URL = './data/ecoflow_history.json';
         
         // Variables globales
@@ -282,14 +274,13 @@
                 
                 allData = await response.json();
                 
-                // Inicializar selector de dispositivos
-                initDeviceSelector();
-                
-                // Cargar datos del primer dispositivo
-                const firstDevice = Object.keys(allData)[0];
-                if (firstDevice) {
-                    document.getElementById('device-select').value = firstDevice;
+                // Cargar datos del dispositivo
+                const deviceSn = "R351ZAB5PGAW0684";
+                if (allData[deviceSn]) {
                     updateCharts();
+                } else {
+                    document.getElementById('last-update').innerHTML = 
+                        '⚠️ No hay datos disponibles. Esperando primera lectura...';
                 }
                 
             } catch (error) {
@@ -297,24 +288,6 @@
                 document.getElementById('last-update').innerHTML = 
                     '❌ Error al cargar datos. Verifica que el archivo existe.';
             }
-        }
-        
-        // ========================================
-        // SELECTOR DE DISPOSITIVOS
-        // ========================================
-        
-        function initDeviceSelector() {
-            const select = document.getElementById('device-select');
-            select.innerHTML = '';
-            
-            for (const [sn, device] of Object.entries(allData)) {
-                const option = document.createElement('option');
-                option.value = sn;
-                option.textContent = device.device_name;
-                select.appendChild(option);
-            }
-            
-            select.addEventListener('change', updateCharts);
         }
         
         // ========================================
@@ -344,13 +317,20 @@
             const batteryEl = document.getElementById('stat-battery');
             batteryEl.textContent = `${batteryPercent}%`;
             
-            // Aplicar color según umbral (MODIFICAR LOW_BATTERY_THRESHOLD arriba)
+            // Aplicar color según umbral
             if (batteryPercent < LOW_BATTERY_THRESHOLD) {
                 batteryEl.classList.add('battery-low');
                 batteryEl.classList.remove('battery-ok');
             } else {
                 batteryEl.classList.add('battery-ok');
                 batteryEl.classList.remove('battery-low');
+            }
+            
+            // Mostrar indicador de batería adicional si existe
+            if (latestReading.has_extra_battery) {
+                const indicator = document.getElementById('extra-battery-indicator');
+                indicator.style.display = 'block';
+                indicator.classList.add('has-extra-battery');
             }
             
             document.getElementById('stat-solar').textContent = `${solarInput} W`;
@@ -367,10 +347,10 @@
         // ========================================
         
         function updateCharts() {
-            const deviceSn = document.getElementById('device-select').value;
+            const deviceSn = "R351ZAB5PGAW0684";
             const timeRange = parseInt(document.getElementById('time-range').value);
             
-            if (!deviceSn || !allData[deviceSn]) {
+            if (!allData[deviceSn]) {
                 return;
             }
             
@@ -419,7 +399,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '🔋 Batería (%)',
+                        label: '🔋 Batería Total (%)',
                         data: data,
                         borderColor: 'rgba(76, 175, 80, 1)',
                         backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -438,7 +418,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: '📊 Nivel de Batería',
+                            text: '📊 Nivel de Batería Total (DELTA 2 Max + Batería Adicional)',
                             font: {
                                 size: 18,
                                 weight: 'bold'
@@ -499,7 +479,7 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: '☀️ Entrada Solar (W)',
+                            label: '☀️ Entrada Total (W)',
                             data: solarData,
                             borderColor: 'rgba(255, 193, 7, 1)',
                             backgroundColor: 'rgba(255, 193, 7, 0.1)',
@@ -526,7 +506,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: '⚡ Entrada Solar vs Salida Total',
+                            text: '⚡ Entrada vs Salida Total (Sistema Completo)',
                             font: {
                                 size: 18,
                                 weight: 'bold'
