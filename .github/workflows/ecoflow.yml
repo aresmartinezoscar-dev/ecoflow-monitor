@@ -1,0 +1,34 @@
+name: EcoFlow Data Collector
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # cada 15 minutos
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create Firebase service account file
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > serviceAccountKey.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests firebase-admin
+
+      - name: Run collector
+        env:
+          ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
+          ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
+          DELTA_SN: ${{ secrets.DELTA_SN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python ecoflow_collector.py
