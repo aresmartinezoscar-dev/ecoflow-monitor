@@ -7,6 +7,8 @@
   <!-- Chart.js + adapter de fechas -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+  <!-- SheetJS para exportar XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
@@ -52,7 +54,7 @@
           </div>
         </div>
         <div class="group right">
-          <button id="exportBtn" class="btn-secondary">Exportar CSV</button>
+          <button id="exportXlsxBtn" class="btn-secondary">Exportar XLSX</button>
           <span id="status" class="muted">—</span>
         </div>
       </div>
@@ -80,14 +82,14 @@
       <div class="card">
         <div class="card-head">
           <h3>Estado de carga (%)</h3>
-          <small class="muted">Barra/escala se ajustan automáticamente</small>
+          <small class="muted">Eje Y = mín & máx del rango</small>
         </div>
         <canvas id="socChart" height="150"></canvas>
       </div>
       <div class="card">
         <div class="card-head">
           <h3>Potencia total (W)</h3>
-          <small class="muted">Entrada vs Salida</small>
+          <small class="muted">Entrada vs Salida · Y autoajustado</small>
         </div>
         <canvas id="powerChart" height="150"></canvas>
       </div>
