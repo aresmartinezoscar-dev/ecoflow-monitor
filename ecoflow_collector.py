@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import firebase_admin
 from firebase_admin import credentials, db
-
+#  
 # === Config desde variables de entorno (GitHub Secrets) ===
 API_BASE = "https://api.ecoflow.com"
 ACCESS_KEY = os.environ["ECOFLOW_ACCESS_KEY"]
@@ -109,3 +109,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
