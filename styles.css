@@ -92,6 +92,7 @@ body.theme-dark .table-controls{
   border-radius:10px;
   border:1px solid rgba(0,0,0,.15);
   font-size:14px;
+  color: var(--text);     /* 🔥 ESTA ES LA LÍNEA QUE SOLUCIONA EL PROBLEMA */
 }
 body.theme-dark .tc-main input[type="date"],
 body.theme-dark .tc-main input[type="number"]{
@@ -116,5 +117,6 @@ body.theme-dark .tc-main input[type="number"]{
 @media (max-width:900px){
   .tc-block.tc-right{margin-left:0;max-width:none;}
 }
+
 
 
