@@ -50,3 +50,24 @@ input:checked + .slider{background:#2ab673}
 input:checked + .slider:before{transform:translateX(20px)}
 
 @media (max-width:900px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
+
+.table-controls{
+  margin:10px 0 6px 0;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(0,0,0,.03);
+}
+body.theme-dark .table-controls{
+  background:rgba(15,23,42,.7);
+}
+.table-controls .range{
+  width:100%;
+}
+.table-controls .range input[type="date"]{
+  flex:1;
+}
+.table-controls .range button{
+  white-space:nowrap;
+}
+
+
