@@ -98,8 +98,28 @@
     <section class="card table-wrap">
       <div class="card-head">
         <h3>Lecturas</h3>
-        <small class="muted"><span id="count">0</span> muestras · Última: <span id="lastTs">—</span></small>
+        <small class="muted">
+          <span id="count">0</span> muestras visibles · Última visible:
+          <span id="lastTs">—</span>
+        </small>
       </div>
+
+      <!-- NUEVOS CONTROLES DE FILTRO PARA LA TABLA -->
+      <div class="table-controls">
+        <div class="group">
+          <label>Filtrar tabla por día</label>
+          <div class="range">
+            <input id="tableDate" type="date" />
+            <button id="tableTodayBtn" class="btn-secondary">Hoy</button>
+            <button id="tableClearBtn" class="btn-secondary">Todo el rango</button>
+            <button id="tableApplyBtn" class="btn-primary">Aplicar</button>
+          </div>
+          <small class="muted">
+            El filtro solo afecta a la tabla, no a las gráficas ni a los KPIs.
+          </small>
+        </div>
+      </div>
+
       <table id="dataTable">
         <thead>
           <tr>
@@ -114,9 +134,11 @@
         <tbody></tbody>
       </table>
     </section>
+
   </main>
 
   <script src="firebase-config.js"></script>
   <script src="frontend.js"></script>
 </body>
 </html>
+
