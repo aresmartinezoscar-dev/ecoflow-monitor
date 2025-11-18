@@ -1,15 +1,17 @@
 // ======= Config & estado =======
 const DB_PATH = "ecoflow_logs";
-const MAX_POINTS = 2000;
-const LIVE_INTERVAL_MS = 60_000; // refresco visual (no afecta a la frecuencia de lecturas)
+const MAX_POINTS = 2000;          // máximo puntos que se cargan del rango
+const LIVE_INTERVAL_MS = 60_000;  // refresco visual (no afecta a lecturas reales)
 let liveTimer = null;
 
 const state = {
   startTs: Date.now() - 24*3600*1000, // últimas 24h por defecto
-  endTs: Date.now(),
-  raw: [],
-  focusDataset: null // índice de dataset en foco o null
+  endTs:   Date.now(),
+  raw: [],            // datos ya "limpios" (con nulos en duplicados)
+  focusDataset: null, // índice de serie en foco o null
 };
+
+const TABLE_MAX_ROWS = 300;  // máximo de filas visibles en la tabla
 
 // ======= Utils =======
 const $ = (id)=>document.getElementById(id);
@@ -50,7 +52,7 @@ const minMaxTicksPlugin = {
 };
 Chart.register(minMaxTicksPlugin);
 
-// ======= Controles de rango =======
+// ======= Controles de rango (gráficas/KPIs) =======
 function applyQuick(range){
   const now = Date.now();
   const map = { "1h":1, "6h":6, "12h":12, "24h":24, "48h":48 };
@@ -64,6 +66,26 @@ function applyCustom(){
   if(!s || !e || e<=s){ alert("Rango no válido"); return; }
   state.startTs = s; state.endTs = e;
   loadRange();
+}
+
+// ======= Limpieza de datos: marcar duplicados consecutivos como "sin datos" =======
+function markDuplicateSamplesAsNull(rows){
+  if(!rows.length) return [];
+  const keys = ["soc_global","soc_delta","soc_extra","watts_in","watts_out"];
+  let lastValues = null;
+
+  return rows.map(row=>{
+    const cur = keys.map(k=>row[k]);
+    if(lastValues && keys.every((k,idx)=>cur[idx]===lastValues[idx])){
+      // mismo valor que el anterior: se considera "lectura congelada"
+      const copy = {...row};
+      keys.forEach(k=>{ copy[k] = null; });
+      return copy;
+    }else{
+      lastValues = cur;
+      return row;
+    }
+  });
 }
 
 // ======= Firebase =======
@@ -88,13 +110,12 @@ function setupCharts(){
     responsive: true, animation: false, parsing:false, normalized:true,
     scales:{
       x:{type:"time", time:{unit:"hour"}, ticks:{autoSkip:true, maxTicksLimit:12}},
-      y:{beginAtZero:false} // límites exactos los fijamos en updateCharts
+      y:{beginAtZero:false}
     },
     plugins:{
       legend:{
         display:true,
         labels:{usePointStyle:true},
-        // Click en leyenda: foco/defoco de dataset (sin ocultar)
         onClick(e, legendItem, legend){
           const index = legendItem.datasetIndex;
           if(state.focusDataset === index){ state.focusDataset = null; }
@@ -113,8 +134,8 @@ function setupCharts(){
     type:"line",
     data:{datasets:[
       {label:"SOC Global", data:[], borderColor:"#16a34a", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
-      {label:"SOC DELTA", data:[], borderColor:"#2563eb", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
-      {label:"SOC Extra",  data:[], borderColor:"#d97706", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
+      {label:"SOC DELTA", data:[],  borderColor:"#2563eb", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
+      {label:"SOC Extra", data:[],   borderColor:"#d97706", borderWidth:2, tension:.25, pointRadius:0, _baseWidth:2, _decimals:0},
     ]},
     options: JSON.parse(JSON.stringify(commonOpts))
   });
@@ -129,7 +150,7 @@ function setupCharts(){
   });
 }
 
-// Aplicar estilo de foco (engrosa y opaca la serie seleccionada; atenúa el resto)
+// aplicar estilo de foco
 function applyFocusStyles(){
   [socChart, powerChart].forEach(chart=>{
     chart.data.datasets.forEach((ds, idx)=>{
@@ -140,15 +161,14 @@ function applyFocusStyles(){
     chart.update();
   });
 }
-function setAlpha(hexOrRgb, alpha){
-  // soporta colores hex tipo #rrggbb
-  if(/^#([0-9a-f]{6})$/i.test(hexOrRgb)){
-    const r = parseInt(hexOrRgb.slice(1,3),16);
-    const g = parseInt(hexOrRgb.slice(3,5),16);
-    const b = parseInt(hexOrRgb.slice(5,7),16);
+function setAlpha(hex, alpha){
+  if(/^#([0-9a-f]{6})$/i.test(hex)){
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
     return `rgba(${r},${g},${b},${alpha})`;
   }
-  return hexOrRgb;
+  return hex;
 }
 
 function updateCharts(rows){
@@ -160,7 +180,6 @@ function updateCharts(rows){
   const win  = toPts("watts_in");
   const wout = toPts("watts_out");
 
-  // Datos
   socChart.data.datasets[0].data = socG;
   socChart.data.datasets[1].data = socD;
   socChart.data.datasets[2].data = socE;
@@ -168,7 +187,6 @@ function updateCharts(rows){
   powerChart.data.datasets[0].data = win;
   powerChart.data.datasets[1].data = wout;
 
-  // Límites Y EXACTOS: mín/máx del rango
   const sg = socG.map(p=>p.y).filter(v=>v!=null);
   const sd = socD.map(p=>p.y).filter(v=>v!=null);
   const se = socE.map(p=>p.y).filter(v=>v!=null);
@@ -187,7 +205,7 @@ function updateCharts(rows){
   applyFocusStyles();
 }
 
-// ======= KPIs + tabla =======
+// ======= KPIs =======
 function updateKPIs(rows){
   const g = rows.map(r=>r.soc_global);
   const d = rows.map(r=>r.soc_delta);
@@ -209,14 +227,40 @@ function updateKPIs(rows){
   $("socExtraAvg").textContent = fmt(Se.avg,1);
   $("socExtraMin").textContent = fmt(Se.min,0);
   $("socExtraMax").textContent = fmt(Se.max,0);
+}
 
-  $("count").textContent = rows.length;
-  $("lastTs").textContent = rows.length ? new Date(rows.at(-1).ts).toLocaleString() : "—";
-
-  // tabla
+// ======= Tabla con filtro por día =======
+function updateTable(){
+  const rows = state.raw;
   const tb = $("dataTable").querySelector("tbody");
   tb.innerHTML = "";
-  rows.slice(-500).forEach(r=>{
+
+  if(!rows.length){
+    $("count").textContent = "0";
+    $("lastTs").textContent = "—";
+    return;
+  }
+
+  // determinar rango para la tabla según fecha seleccionada
+  const dateStr = $("tableDate").value;
+  let subset = rows;
+  if(dateStr){
+    const start = new Date(dateStr + "T00:00").getTime();
+    const end   = start + 24*3600*1000;
+    subset = rows.filter(r=> r.ts>=start && r.ts<end);
+  }
+
+  // quitar filas totalmente nulas (duplicados "congelados")
+  subset = subset.filter(r=> !(
+    r.soc_global==null && r.soc_delta==null && r.soc_extra==null &&
+    r.watts_in==null && r.watts_out==null
+  ));
+
+  const visible = subset.slice(-TABLE_MAX_ROWS);
+  $("count").textContent = visible.length;
+  $("lastTs").textContent = visible.length ? new Date(visible.at(-1).ts).toLocaleString() : "—";
+
+  visible.forEach(r=>{
     const tr=document.createElement("tr");
     const cells=[
       new Date(r.ts).toLocaleString(),
@@ -224,7 +268,9 @@ function updateKPIs(rows){
       fmt(r.watts_in,0), fmt(r.watts_out,0)
     ];
     cells.forEach(v=>{
-      const td=document.createElement("td"); td.textContent=v; tr.appendChild(td);
+      const td=document.createElement("td");
+      td.textContent=v;
+      tr.appendChild(td);
     });
     tb.appendChild(tr);
   });
@@ -257,10 +303,14 @@ function exportXLSX(){
 async function loadRange(){
   $("startDt").value = toLocalISO(state.startTs);
   $("endDt").value   = toLocalISO(state.endTs);
-  const rows = await readRange(state.startTs, state.endTs);
+
+  let rows = await readRange(state.startTs, state.endTs);
+  rows = markDuplicateSamplesAsNull(rows);   // <<< limpiar duplicados
   state.raw = rows;
+
   updateKPIs(rows);
   updateCharts(rows);
+  updateTable();
 }
 
 function setLive(enabled){
@@ -293,9 +343,21 @@ $("applyBtn").addEventListener("click", applyCustom);
 $("exportXlsxBtn").addEventListener("click", exportXLSX);
 $("liveToggle").addEventListener("change", e=> setLive(e.target.checked));
 
+// Filtros de tabla
+$("tableApplyBtn").addEventListener("click", updateTable);
+$("tableTodayBtn").addEventListener("click", ()=>{
+  const today = new Date();
+  const iso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  $("tableDate").value = iso;
+  updateTable();
+});
+$("tableClearBtn").addEventListener("click", ()=>{
+  $("tableDate").value = "";
+  updateTable();
+});
+
 // ======= Init =======
 window.addEventListener("load", ()=>{
-  // init rango por defecto
   $("startDt").value = toLocalISO(state.startTs);
   $("endDt").value   = toLocalISO(state.endTs);
   setupCharts();
