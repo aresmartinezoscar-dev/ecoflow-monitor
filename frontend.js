@@ -1,17 +1,22 @@
 // ======= Config & estado =======
 const DB_PATH = "ecoflow_logs";
-const MAX_POINTS = 2000;          // máximo puntos que se cargan del rango
-const LIVE_INTERVAL_MS = 60_000;  // refresco visual (no afecta a lecturas reales)
+const MAX_POINTS = 2000;
+const LIVE_INTERVAL_MS = 60_000;
+
+const TABLE_PAGE_SIZE_DEFAULT = 25;
+const TABLE_PAGE_SIZE_MAX = 50;
+
 let liveTimer = null;
 
 const state = {
-  startTs: Date.now() - 24*3600*1000, // últimas 24h por defecto
+  startTs: Date.now() - 24*3600*1000,
   endTs:   Date.now(),
-  raw: [],            // datos ya "limpios" (con nulos en duplicados)
+  raw: [],            // datos limpios (duplicados congelados a null)
   focusDataset: null, // índice de serie en foco o null
+  tablePageSize: TABLE_PAGE_SIZE_DEFAULT,
+  tablePage: 0,
+  tableFiltered: []   // subconjunto tras filtro de día y limpieza
 };
-
-const TABLE_MAX_ROWS = 300;  // máximo de filas visibles en la tabla
 
 // ======= Utils =======
 const $ = (id)=>document.getElementById(id);
@@ -39,7 +44,7 @@ function hardMinMax(values, {floor0=false}={}){
   return {min:lo, max:hi};
 }
 
-// Plugin: dejar SOLO ticks min y max en eje Y
+// Plugin: solo ticks min y max en Y
 const minMaxTicksPlugin = {
   id: 'minMaxTicks',
   afterBuildTicks(scale) {
@@ -52,7 +57,7 @@ const minMaxTicksPlugin = {
 };
 Chart.register(minMaxTicksPlugin);
 
-// ======= Controles de rango (gráficas/KPIs) =======
+// ======= Rango principal (gráficas/KPIs) =======
 function applyQuick(range){
   const now = Date.now();
   const map = { "1h":1, "6h":6, "12h":12, "24h":24, "48h":48 };
@@ -68,7 +73,7 @@ function applyCustom(){
   loadRange();
 }
 
-// ======= Limpieza de datos: marcar duplicados consecutivos como "sin datos" =======
+// ======= Limpieza: duplicados consecutivos (internet caído) =======
 function markDuplicateSamplesAsNull(rows){
   if(!rows.length) return [];
   const keys = ["soc_global","soc_delta","soc_extra","watts_in","watts_out"];
@@ -77,7 +82,6 @@ function markDuplicateSamplesAsNull(rows){
   return rows.map(row=>{
     const cur = keys.map(k=>row[k]);
     if(lastValues && keys.every((k,idx)=>cur[idx]===lastValues[idx])){
-      // mismo valor que el anterior: se considera "lectura congelada"
       const copy = {...row};
       keys.forEach(k=>{ copy[k] = null; });
       return copy;
@@ -116,7 +120,7 @@ function setupCharts(){
       legend:{
         display:true,
         labels:{usePointStyle:true},
-        onClick(e, legendItem, legend){
+        onClick(e, legendItem){
           const index = legendItem.datasetIndex;
           if(state.focusDataset === index){ state.focusDataset = null; }
           else { state.focusDataset = index; }
@@ -150,7 +154,16 @@ function setupCharts(){
   });
 }
 
-// aplicar estilo de foco
+function setAlpha(hex, alpha){
+  if(/^#([0-9a-f]{6})$/i.test(hex)){
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return hex;
+}
+
 function applyFocusStyles(){
   [socChart, powerChart].forEach(chart=>{
     chart.data.datasets.forEach((ds, idx)=>{
@@ -160,15 +173,6 @@ function applyFocusStyles(){
     });
     chart.update();
   });
-}
-function setAlpha(hex, alpha){
-  if(/^#([0-9a-f]{6})$/i.test(hex)){
-    const r = parseInt(hex.slice(1,3),16);
-    const g = parseInt(hex.slice(3,5),16);
-    const b = parseInt(hex.slice(5,7),16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-  return hex;
 }
 
 function updateCharts(rows){
@@ -229,36 +233,64 @@ function updateKPIs(rows){
   $("socExtraMax").textContent = fmt(Se.max,0);
 }
 
-// ======= Tabla con filtro por día =======
-function updateTable(){
+// ======= Tabla + filtro de día + paginación =======
+function recomputeTableFiltered(){
   const rows = state.raw;
-  const tb = $("dataTable").querySelector("tbody");
-  tb.innerHTML = "";
-
   if(!rows.length){
-    $("count").textContent = "0";
-    $("lastTs").textContent = "—";
+    state.tableFiltered = [];
     return;
   }
 
-  // determinar rango para la tabla según fecha seleccionada
   const dateStr = $("tableDate").value;
   let subset = rows;
+
   if(dateStr){
     const start = new Date(dateStr + "T00:00").getTime();
     const end   = start + 24*3600*1000;
     subset = rows.filter(r=> r.ts>=start && r.ts<end);
   }
 
-  // quitar filas totalmente nulas (duplicados "congelados")
+  // quitar filas totalmente nulas (duplicados)
   subset = subset.filter(r=> !(
     r.soc_global==null && r.soc_delta==null && r.soc_extra==null &&
     r.watts_in==null && r.watts_out==null
   ));
 
-  const visible = subset.slice(-TABLE_MAX_ROWS);
-  $("count").textContent = visible.length;
-  $("lastTs").textContent = visible.length ? new Date(visible.at(-1).ts).toLocaleString() : "—";
+  state.tableFiltered = subset;
+}
+
+function updateTable(){
+  recomputeTableFiltered();
+  const subset = state.tableFiltered;
+  const tb = $("dataTable").querySelector("tbody");
+  tb.innerHTML = "";
+
+  const total = subset.length;
+  $("count").textContent = total;
+
+  if(!total){
+    $("lastTs").textContent = "—";
+    $("pageInfo").textContent = "0 de 0";
+    $("prevPageBtn").disabled = true;
+    $("nextPageBtn").disabled = true;
+    return;
+  }
+
+  const size = state.tablePageSize;
+  const pages = Math.max(1, Math.ceil(total / size));
+
+  if(state.tablePage >= pages) state.tablePage = pages-1;
+  if(state.tablePage < 0) state.tablePage = 0;
+
+  const startIndex = state.tablePage * size;
+  const endIndex   = Math.min(startIndex + size, total);
+  const visible = subset.slice(startIndex, endIndex);
+
+  $("lastTs").textContent = new Date(visible.at(-1).ts).toLocaleString();
+  $("pageInfo").textContent = `${startIndex+1}–${endIndex} de ${total}`;
+
+  $("prevPageBtn").disabled = (state.tablePage === 0);
+  $("nextPageBtn").disabled = (state.tablePage >= pages-1);
 
   visible.forEach(r=>{
     const tr=document.createElement("tr");
@@ -276,7 +308,7 @@ function updateTable(){
   });
 }
 
-// ======= Export XLSX =======
+// ======= Export XLSX (todo el rango limpio) =======
 function exportXLSX(){
   const rows = state.raw;
   if(!rows.length){ alert("Sin datos para exportar"); return; }
@@ -305,8 +337,9 @@ async function loadRange(){
   $("endDt").value   = toLocalISO(state.endTs);
 
   let rows = await readRange(state.startTs, state.endTs);
-  rows = markDuplicateSamplesAsNull(rows);   // <<< limpiar duplicados
+  rows = markDuplicateSamplesAsNull(rows);
   state.raw = rows;
+  state.tablePage = 0; // resetea paginación
 
   updateKPIs(rows);
   updateCharts(rows);
@@ -343,16 +376,40 @@ $("applyBtn").addEventListener("click", applyCustom);
 $("exportXlsxBtn").addEventListener("click", exportXLSX);
 $("liveToggle").addEventListener("change", e=> setLive(e.target.checked));
 
-// Filtros de tabla
-$("tableApplyBtn").addEventListener("click", updateTable);
+// Filtros/paginación tabla
+$("tableApplyBtn").addEventListener("click", ()=>{
+  state.tablePage = 0;
+  updateTable();
+});
 $("tableTodayBtn").addEventListener("click", ()=>{
   const today = new Date();
   const iso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
   $("tableDate").value = iso;
+  state.tablePage = 0;
   updateTable();
 });
 $("tableClearBtn").addEventListener("click", ()=>{
   $("tableDate").value = "";
+  state.tablePage = 0;
+  updateTable();
+});
+
+$("pageSizeInput").addEventListener("change", ()=>{
+  let val = parseInt($("pageSizeInput").value,10);
+  if(isNaN(val) || val <= 0) val = TABLE_PAGE_SIZE_DEFAULT;
+  if(val > TABLE_PAGE_SIZE_MAX) val = TABLE_PAGE_SIZE_MAX;
+  $("pageSizeInput").value = val;
+  state.tablePageSize = val;
+  state.tablePage = 0;
+  updateTable();
+});
+
+$("prevPageBtn").addEventListener("click", ()=>{
+  state.tablePage--;
+  updateTable();
+});
+$("nextPageBtn").addEventListener("click", ()=>{
+  state.tablePage++;
   updateTable();
 });
 
@@ -360,6 +417,7 @@ $("tableClearBtn").addEventListener("click", ()=>{
 window.addEventListener("load", ()=>{
   $("startDt").value = toLocalISO(state.startTs);
   $("endDt").value   = toLocalISO(state.endTs);
+  $("pageSizeInput").value = TABLE_PAGE_SIZE_DEFAULT;
   setupCharts();
   loadRange();
 });
