@@ -52,22 +52,69 @@ input:checked + .slider:before{transform:translateX(20px)}
 @media (max-width:900px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
 
 .table-controls{
-  margin:10px 0 6px 0;
-  padding:10px 12px;
-  border-radius:10px;
+  margin:10px 0 8px 0;
+  padding:12px 14px;
+  border-radius:12px;
   background:rgba(0,0,0,.03);
 }
 body.theme-dark .table-controls{
-  background:rgba(15,23,42,.7);
+  background:rgba(15,23,42,.85);
 }
-.table-controls .range{
-  width:100%;
+.tc-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  align-items:flex-end;
 }
-.table-controls .range input[type="date"]{
+.tc-block{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:260px;
+}
+.tc-block.tc-right{
+  margin-left:auto;
+  max-width:340px;
+}
+.tc-label{
+  font-size:13px;
+  font-weight:600;
+}
+.tc-main{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.tc-main input[type="date"],
+.tc-main input[type="number"]{
   flex:1;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.15);
+  font-size:14px;
 }
-.table-controls .range button{
-  white-space:nowrap;
+body.theme-dark .tc-main input[type="date"],
+body.theme-dark .tc-main input[type="number"]{
+  background:#020617;
+  border-color:#1f2937;
+}
+.tc-pagination{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:6px;
+  justify-content:flex-end;
+}
+.tc-pagination button{
+  padding:6px 10px;
+}
+.tc-pagination button:disabled{
+  opacity:0.4;
+  cursor:default;
+}
+
+@media (max-width:900px){
+  .tc-block.tc-right{margin-left:0;max-width:none;}
 }
 
 
