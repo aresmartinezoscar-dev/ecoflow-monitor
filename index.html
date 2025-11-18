@@ -99,25 +99,40 @@
       <div class="card-head">
         <h3>Lecturas</h3>
         <small class="muted">
-          <span id="count">0</span> muestras visibles · Última visible:
+          <span id="count">0</span> muestras (filtro actual) · Última visible:
           <span id="lastTs">—</span>
         </small>
       </div>
 
-      <!-- NUEVOS CONTROLES DE FILTRO PARA LA TABLA -->
+      <!-- CONTROLES DE FILTRO Y PAGINACIÓN DE LA TABLA -->
       <div class="table-controls">
-        <div class="group">
-          <label>Filtrar tabla por día</label>
-          <div class="range">
-            <input id="tableDate" type="date" />
-            <button id="tableTodayBtn" class="btn-secondary">Hoy</button>
-            <button id="tableClearBtn" class="btn-secondary">Todo el rango</button>
-            <button id="tableApplyBtn" class="btn-primary">Aplicar</button>
+        <div class="tc-row">
+          <div class="tc-block">
+            <div class="tc-label">Filtrar tabla por día</div>
+            <div class="tc-main">
+              <input id="tableDate" type="date" />
+              <button id="tableTodayBtn" class="btn-secondary">Hoy</button>
+              <button id="tableClearBtn" class="btn-secondary">Todo el rango</button>
+              <button id="tableApplyBtn" class="btn-primary">Aplicar</button>
+            </div>
           </div>
-          <small class="muted">
-            El filtro solo afecta a la tabla, no a las gráficas ni a los KPIs.
-          </small>
+
+          <div class="tc-block tc-right">
+            <div class="tc-label">Registros por página</div>
+            <div class="tc-main">
+              <input id="pageSizeInput" type="number" min="5" max="50" step="5" value="25" />
+            </div>
+            <div class="tc-pagination">
+              <button id="prevPageBtn" class="btn-secondary">&lt;</button>
+              <span id="pageInfo" class="muted">0 de 0</span>
+              <button id="nextPageBtn" class="btn-secondary">&gt;</button>
+            </div>
+          </div>
         </div>
+
+        <small class="muted">
+          El filtro de día y la paginación solo afectan a la tabla, no a las gráficas.
+        </small>
       </div>
 
       <table id="dataTable">
@@ -135,10 +150,12 @@
       </table>
     </section>
 
+
   </main>
 
   <script src="firebase-config.js"></script>
   <script src="frontend.js"></script>
 </body>
 </html>
+
 
